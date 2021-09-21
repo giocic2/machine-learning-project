@@ -33,6 +33,8 @@ def get_discrete_state(state):
 # Q table initialization with random values
 q_table = np.random.uniform(low=-2, high=0, size=(DISCRETE_OS_SIZE + [env.action_space.n])) # 20x20x3 size (every possible action for every possible state (in the buckets).
 
+successes = 0
+last_1000_successes = 0
 
 for episode in range(EPISODES): # We need a lot of episodes to train
     state = env.reset()
@@ -70,6 +72,10 @@ for episode in range(EPISODES): # We need a lot of episodes to train
         elif new_state[0] >= env.goal_position: # If goal position achieved, end the simulation
             q_table[discrete_state + (action,)] = 0 # Reward for completing task
             print("GOAL ACHIEVED!")
+            successes += 1
+            if episode > (EPISODES - 1000):
+                last_1000_successes += 1
+
         
         discrete_state = new_discrete_state
 
@@ -77,3 +83,5 @@ for episode in range(EPISODES): # We need a lot of episodes to train
         epsilon -= epsilon_decay_value
         
 env.close()
+print("Total number of successes: ", successes)
+print("Number of successes on last 1000 episodes: ", last_1000_successes)
