@@ -8,13 +8,16 @@ env = gym.make("MountainCar-v0")
 # Q-learning settings.
 DISCOUNT = 0.95
 LEARNING_RATE = 0.1
-EPISODES = 4_000 + 1
-SHOW_EVERY = 1_000 # We render only a few episodes, not every single one.
+EPISODES = 10_000 + 1
+SHOW_EVERY = 1000 # We render only a few episodes, not every single one.
 
 # Statistics settings.
 STATS_EVERY = 100
 ep_rewards = []
 aggr_ep_rewards = {'ep': [], 'avg': [], 'max': [], 'min': []}
+
+# Q-table saving setting
+SAVE_EVERY = 10
 
 # Exploration settings.
 epsilon = 1 # not a constant, going to be decayed. The higher epsilon, the more random action we will try.
@@ -95,7 +98,10 @@ for episode in range(EPISODES): # We need a lot of episodes to train.
         aggr_ep_rewards['avg'].append(average_reward)
         aggr_ep_rewards["max"].append(max(ep_rewards[-STATS_EVERY:]))
         aggr_ep_rewards["min"].append(min(ep_rewards[-STATS_EVERY:]))
-        print(f"Episode: {episode:>5d}, average reward: {average_reward:>4.1f}, current epsilon: {epsilon:>1.2f}")  
+        print(f"Episode: {episode:>5d}, average reward: {average_reward:>4.1f}, current epsilon: {epsilon:>1.2f}")
+    # Saving q-table each episode, or form time to time
+    if episode % SAVE_EVERY == 0:
+        np.save(f"qtables/{episode}-qtable.npy", q_table)
 env.close()
 print("Total number of successes: ", successes)
 print("Number of successes on last 1000 episodes: ", last_1000_successes)
