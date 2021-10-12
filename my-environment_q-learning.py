@@ -1,9 +1,4 @@
 import numpy as np
-import pickle # Library to save/load Q-tables.
-from PIL import Image
-# import cv2
-import time
-import matplotlib
 from matplotlib import style
 import matplotlib.pyplot as plt
 
@@ -11,7 +6,7 @@ style.use("ggplot")
 
 # Q-table variables.
 TIME_BUCKETS = 10 # Time index.
-FREQ_BUCKETS = 10 # VCO frequency.
+FREQ_BUCKETS = 20 # VCO frequency.
 TEMP_BUCKETS = 2 # VCO temperature.
 ACTIONS_NUMBER = 3
 
@@ -24,7 +19,7 @@ MAX_FREQ = 26e9 # Hz
 freq_step = (MAX_FREQ - MIN_FREQ) / FREQ_BUCKETS # Hz/bucket
 
 # Q-learning settings.
-EPISODES_LIMIT = 3_000 + 1
+EPISODES_LIMIT = 10_000 + 1
 LEARNING_RATE = 0.1
 DISCOUNT = 0.95
 epsilon = np.full(TEMP_BUCKETS, 0.5)
@@ -61,7 +56,7 @@ def getTemperature():
     return temperature_bucket
 
 # Let's define goal modulation, the one that must be learned from the learning agent.
-goal_modulation = np.ndarray((TEMP_BUCKETS, FREQ_BUCKETS))
+goal_modulation = np.ndarray((TEMP_BUCKETS, TIME_BUCKETS))
 goal_modulation[0,:] = [0,1,2,3,3,4,4,5,5,5] # Modulation @ 1st temperature value.
 goal_modulation[1,:] = [1,3,3,4,4,5,5,6,6,6] # Modulation @ 2nd temperature value.
 # Plot goal modulation
@@ -71,15 +66,8 @@ plt.ylabel("Frequency bucket")
 plt.xlabel("Time bucket")
 plt.show()
 
-# Q-table from file.
-START_Q_TABLE= None # If we have a pickled Q table, we'll put the filename of it here.
-
-# Q-table initialization, if it's not picked from file.
-if START_Q_TABLE is None:
-    q_table = np.random.uniform(low=Q_VALUE_MIN, high=Q_VALUE_MAX, size=(ACTIONS_NUMBER,TEMP_BUCKETS,TIME_BUCKETS,FREQ_BUCKETS))
-else:
-    with open(START_Q_TABLE, "rb") as qTable_file:
-        q_table = pickle.load(qTable_file)
+# Q-table: random initialization
+q_table = np.random.uniform(low=Q_VALUE_MIN, high=Q_VALUE_MAX, size=(ACTIONS_NUMBER,TEMP_BUCKETS,TIME_BUCKETS,FREQ_BUCKETS))
 
 rewards_history = []
 
@@ -121,7 +109,6 @@ for episode in range(EPISODES_LIMIT):
         new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
         q_table[action, current_temperature, current_time, current_freq] = new_q
         episode_reward += reward
-    print("episode reward: ", episode_reward)
     rewards_history.append(episode_reward)
     epsilon[current_temperature] *= EPS_DECAY[current_temperature]
 moving_avg = np.convolve(rewards_history, np.ones((SHOW_EVERY,))/SHOW_EVERY, mode='valid')
