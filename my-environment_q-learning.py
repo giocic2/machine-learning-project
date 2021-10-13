@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import style
 import matplotlib.pyplot as plt
+plt.ion()
 
 # Resolutions
 TIME_RESOL = 1e-3 # s
@@ -45,7 +46,7 @@ SHOW_EVERY = 1_000
 Q_VALUE_MIN = -5
 Q_VALUE_MAX = 0
 
-class instant_frequency:
+class learning_agent:
     def __init__(self):
         self.freq = 0
     def __str__(self):
@@ -87,25 +88,32 @@ for temp in temp_axis:
     temp_index += 1
     voltage_index = 0
 # Plot VCO tuning law
+fig1 = plt.figure(1)
+ax1 = fig1.add_subplot(1,1,1)
 for temp_index in range(temp_buckets):
-    plt.plot(voltage_axis, tuning_law[temp_index,:])
-plt.ylabel("Frequency [GHz]")
-plt.xlabel("Voltage [V]")
-plt.show()
+    ax1.plot(voltage_axis, tuning_law[temp_index,:])
+ax1.set_title("VCO tuning voltage law (model from datasheet)")
+ax1.set_ylabel("Frequency [GHz]")
+ax1.set_xlabel("Voltage [V]")
 
-# # Let's define goal modulation, the one that must be learned from the learning agent.
-# goal_modulation = np.ndarray((temp_buckets, time_buckets))
-# # Example goal modulation
-# for temp in range(temp_buckets):
-#     for time in range(time_buckets):
-#         goal_modulation[temp,time] = (time+3)**(1/(3+temp)) + 1/(temp+1)
-#     goal_modulation[temp,:] = goal_modulation[temp,:] * freq_buckets / 3 # scale modulation on all axis
-# # Plot goal modulation
-# for tempIndex in range(temp_buckets):
-#     plt.plot([i for i in range(time_buckets)], goal_modulation[tempIndex,:])
-# plt.ylabel("Frequency bucket")
-# plt.xlabel("Time bucket")
-# plt.show()
+# Let's define goal modulation, the one that must be learned from the learning agent.
+goal_modulation = np.ndarray((temp_buckets, time_buckets))
+# Example goal modulation
+for temp in range(temp_buckets):
+    for time in range(time_buckets):
+        goal_modulation[temp,time] = (time+3)**(1/(3+temp)) + 1/(temp+1)
+    goal_modulation[temp,:] = goal_modulation[temp,:] * freq_buckets / 3 # scale modulation on all axis
+# Plot goal modulation
+fig2 = plt.figure(2)
+ax2 = fig2.add_subplot(1,1,1)
+for tempIndex in range(temp_buckets):
+    plt.plot([i for i in range(time_buckets)], goal_modulation[tempIndex,:])
+ax2.set_title("Goal modulation")
+ax2.set_ylabel("Frequency [GHz]")
+ax2.set_xlabel("Voltage [V]")
+
+input("Press [Enter] to end the program...")
+plt.close('all')
 
 # # Q-table: random initialization
 # q_table = np.random.uniform(low=Q_VALUE_MIN, high=Q_VALUE_MAX, size=(ACTIONS_NUMBER,temp_buckets,time_buckets,freq_buckets))
