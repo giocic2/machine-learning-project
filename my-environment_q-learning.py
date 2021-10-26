@@ -6,12 +6,12 @@ plt.ion()
 # Resolutions
 TIME_RESOL = 100e-6 # s
 FREQ_RESOL = 1e6 # Hz
-VOLTAGE_RESOL = 1e-3 # V
+VOLTAGE_RESOL = 1e-5 # V
 TEMP_RESOL = 10 # K
 
 # Q-table and environment variables.
 # Number of possible actions for the learning agent
-ACTIONS_NUMBER = 4
+ACTIONS_NUMBER = 9
 print("Number of possible actions: ", ACTIONS_NUMBER)
 # Time
 START_TIME = 0 # seconds
@@ -21,7 +21,7 @@ print("Time buckets: ", time_buckets)
 time_axis = np.linspace(start=START_TIME, stop=END_TIME, num=time_buckets, endpoint=True)
 # Frequency
 MIN_IF_FREQ = 0 # Hz
-MAX_IF_FREQ = 120e6 # Hz
+MAX_IF_FREQ = 500e6 # Hz
 freq_buckets = round((MAX_IF_FREQ - MIN_IF_FREQ) / FREQ_RESOL) + 1
 print("Frequency buckets: ", freq_buckets)
 freq_axis = np.linspace(start=MIN_IF_FREQ, stop=MAX_IF_FREQ, num=freq_buckets, endpoint=True)
@@ -53,14 +53,17 @@ elif (rtt % TIME_RESOL) != 0:
     print("rtt must be mupltiple of time resolution. Please fix.")
     raise ValueError
 target_IF = BANDWIDTH/CHIRP_PERIOD*rtt
+# Q-table size
+print("Q-table size: ", time_buckets*freq_buckets*voltage_buckets*temp_buckets)
+
 
 # Q-learning settings.
-EPISODES_LIMIT = 500_000 + 1
-LEARNING_RATE = 0.1
-DISCOUNT = 0.95
+EPISODES_LIMIT = 100_000 + 1
+LEARNING_RATE = 0.5
+DISCOUNT = 0.5
 epsilon = np.full(temp_buckets, 0.5)
-EPS_DECAY = np.full(temp_buckets, 0.99998) # Every episode will be epsilon*EPS_DECAY
-SHOW_EVERY = 1_000
+EPS_DECAY = np.full(temp_buckets, 0.9999) # Every episode will be epsilon*EPS_DECAY
+SHOW_EVERY = 10_000
 Q_VALUE_MIN = -5
 Q_VALUE_MAX = 0
 
@@ -77,9 +80,17 @@ class learning_agent:
         if choice == 2:
             self.voltage_bucket -= 1 # decrease DAC output voltage FINE
         if choice == 3:
-            self.voltage_bucket += 50 # increase DAC output voltage COARSE
+            self.voltage_bucket += 10 # increase DAC output voltage
         if choice == 4:
-            self.voltage_bucket -= 50 # decrease DAC output voltage COARSE
+            self.voltage_bucket -= 10 # decrease DAC output voltage
+        if choice == 5:
+            self.voltage_bucket += 100 # increase DAC output voltage
+        if choice == 6:
+            self.voltage_bucket -= 100 # decrease DAC output voltage
+        if choice == 7:
+            self.voltage_bucket += 1000 # increase DAC output voltage
+        if choice == 8:
+            self.voltage_bucket -= 1000 # decrease DAC output voltage
         if self.voltage_bucket < 0:
             self.voltage_bucket = 0
         elif self.voltage_bucket > (voltage_buckets - 1):
@@ -183,6 +194,7 @@ for episode in range(EPISODES_LIMIT):
             IF_history[new_time] = MIN_IF_FREQ
         # Evaluate reward for this time step.
         reward = - abs(target_IF - IF_history[new_time])
+        # reward = -abs(goal_modulation[new_time] - VCO_history[new_time])
         new_time = current_time + 1
         new_freq = round(IF_history[new_time]/FREQ_RESOL)
 
@@ -198,7 +210,7 @@ for episode in range(EPISODES_LIMIT):
             plt.clf()
             # TX and RX signals
             ax3 = fig3.add_subplot(3,1,1)
-            ax3.set_title("Mixer input signals")
+            ax3.set_title(f"Mixer input signals (episode #{episode})")
             ax3.set_ylabel("Frequency [Hz]")
             ax3.set_xlabel("Time [s]")
             ax3.plot(time_axis, goal_modulation)
@@ -213,9 +225,9 @@ for episode in range(EPISODES_LIMIT):
             # Tuning voltage over time
             ax5 = fig3.add_subplot(3,1,3)
             ax5.set_title("Tuning voltage")
-            ax5.set_ylabel("Voltage bucket")
+            ax5.set_ylabel("Voltage [V]")
             ax5.set_xlabel("Time [s]")
-            ax5.plot(time_axis, DAC_history[:])
+            ax5.plot(time_axis, DAC_history[:]*VOLTAGE_RESOL + MIN_VOLTAGE)
             plt.pause(2)
     rewards_history.append(episode_reward)
     epsilon[current_temperature] *= EPS_DECAY[current_temperature]
