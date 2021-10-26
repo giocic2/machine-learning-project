@@ -11,7 +11,7 @@ TEMP_RESOL = 10 # K
 
 # Q-table and environment variables.
 # Number of possible actions for the learning agent
-ACTIONS_NUMBER = 9
+ACTIONS_NUMBER = 11
 print("Number of possible actions: ", ACTIONS_NUMBER)
 # Time
 START_TIME = 0 # seconds
@@ -21,7 +21,7 @@ print("Time buckets: ", time_buckets)
 time_axis = np.linspace(start=START_TIME, stop=END_TIME, num=time_buckets, endpoint=True)
 # Frequency
 MIN_IF_FREQ = 0 # Hz
-MAX_IF_FREQ = 500e6 # Hz
+MAX_IF_FREQ = 120e6 # Hz
 freq_buckets = round((MAX_IF_FREQ - MIN_IF_FREQ) / FREQ_RESOL) + 1
 print("Frequency buckets: ", freq_buckets)
 freq_axis = np.linspace(start=MIN_IF_FREQ, stop=MAX_IF_FREQ, num=freq_buckets, endpoint=True)
@@ -53,17 +53,18 @@ elif (rtt % TIME_RESOL) != 0:
     print("rtt must be mupltiple of time resolution. Please fix.")
     raise ValueError
 target_IF = BANDWIDTH/CHIRP_PERIOD*rtt
+print("Target IF: ", target_IF, " Hz")
 # Q-table size
 print("Q-table size: ", time_buckets*freq_buckets*voltage_buckets*temp_buckets)
 
 
 # Q-learning settings.
-EPISODES_LIMIT = 100_000 + 1
+EPISODES_LIMIT = 30_000 + 1
 LEARNING_RATE = 0.5
 DISCOUNT = 0.5
 epsilon = np.full(temp_buckets, 0.5)
 EPS_DECAY = np.full(temp_buckets, 0.9999) # Every episode will be epsilon*EPS_DECAY
-SHOW_EVERY = 10_000
+SHOW_EVERY = 1_000
 Q_VALUE_MIN = -5
 Q_VALUE_MAX = 0
 
@@ -91,6 +92,10 @@ class learning_agent:
             self.voltage_bucket += 1000 # increase DAC output voltage
         if choice == 8:
             self.voltage_bucket -= 1000 # decrease DAC output voltage
+        if choice == 9:
+            self.voltage_bucket += 10000 # increase DAC output voltage
+        if choice == 10:
+            self.voltage_bucket -= 10000 # decrease DAC output voltage
         if self.voltage_bucket < 0:
             self.voltage_bucket = 0
         elif self.voltage_bucket > (voltage_buckets - 1):
