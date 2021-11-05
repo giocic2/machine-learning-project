@@ -4,109 +4,100 @@ import time
 plt.ion()
 
 # Resolutions
-TIME_RESOL = 100e-6 # s
-FREQ_RESOL = 1e6 # Hz
-VOLTAGE_RESOL = 1e-5 # V
 TEMP_RESOL = 10 # K
+TIME_RESOL = 10000e-9 # s
+IF_FREQ_RESOL = 1e3 # Hz
+VOLTAGE_RESOL = 1e-3 # V
 
-# Q-table and environment variables.
+
+# Q-table variables.
 # Number of possible actions for the learning agent
-ACTIONS_NUMBER = 11
+ACTIONS_NUMBER = 5
 print("Number of possible actions: ", ACTIONS_NUMBER)
 # Time
 START_TIME = 0 # seconds
 END_TIME = 5e-3 # seconds
 time_buckets = round((END_TIME - START_TIME) / TIME_RESOL) + 1
-print("Time buckets: ", time_buckets)
+print("Time buckets: ", "{:,}".format(time_buckets))
 time_axis = np.linspace(start=START_TIME, stop=END_TIME, num=time_buckets, endpoint=True)
-# Frequency
-MIN_IF_FREQ = 0 # Hz
-MAX_IF_FREQ = 120e6 # Hz
-freq_buckets = round((MAX_IF_FREQ - MIN_IF_FREQ) / FREQ_RESOL) + 1
-print("Frequency buckets: ", freq_buckets)
-freq_axis = np.linspace(start=MIN_IF_FREQ, stop=MAX_IF_FREQ, num=freq_buckets, endpoint=True)
 # Temperature
-MIN_TEMP_C = 0
-MAX_TEMP_C = 50
+MIN_TEMP_C = 10 # °C
+MAX_TEMP_C = 60 # °C
 min_temp = MIN_TEMP_C + 273.15 # K
 max_temp = MAX_TEMP_C + 273.15 # K
 temp_buckets = round((max_temp - min_temp) / TEMP_RESOL) + 1
-print("Temperature buckets: ", temp_buckets)
+print("Temperature buckets: ", "{:,}".format(temp_buckets))
 temp_axis = np.linspace(start=min_temp, stop=max_temp, num=temp_buckets, endpoint=True)
-# Voltage
+# Q-table size
+print("Q-table size: ", "{:,}".format(ACTIONS_NUMBER * temp_buckets * time_buckets), end='\n\n')
+
+# Environment variables.
+# DAC
 MIN_VOLTAGE = 0.5 # Volt
 MAX_VOLTAGE = 5 # Volt
 voltage_buckets = round((MAX_VOLTAGE - MIN_VOLTAGE) / VOLTAGE_RESOL) + 1
-print("Voltage buckets: ", voltage_buckets)
 voltage_axis = np.linspace(start=MIN_VOLTAGE, stop=MAX_VOLTAGE, num=voltage_buckets, endpoint=True)
-# FMCW linear modulation
+print("Voltage resolution: ", VOLTAGE_RESOL, " V")
+# FMCW linear modulation (goal)
 BANDWIDTH = 3e9 # Hz
 CHIRP_PERIOD = END_TIME # s
 START_FREQUENCY = 23e9 # Hz
 # Target
-TARGET_DISTANCE = 15e3 # m
+TARGET_DISTANCE = 1500 # m
 rtt = 2 * TARGET_DISTANCE / 3e8 # round-trip time [s]
+print("Round trip time: ", rtt, " s")
 if rtt < TIME_RESOL:
     print("Time resolution greater that rtt. Please fix.")
     raise ValueError
 elif (rtt % TIME_RESOL) != 0:
-    print("rtt must be mupltiple of time resolution. Please fix.")
+    print("rtt must be mupltiple of time resolution (simulation constrain). Please fix.")
     raise ValueError
 target_IF = BANDWIDTH/CHIRP_PERIOD*rtt
-print("Target IF: ", target_IF, " Hz")
-# Q-table size
-print("Q-table size: ", time_buckets*freq_buckets*voltage_buckets*temp_buckets)
-
+print("Target IF: ", "{:,}".format(target_IF), " Hz")
+# IF frequencies
+MIN_IF_FREQ = 0 # Hz
+MAX_IF_FREQ = target_IF * 2 # Hz
+freq_buckets = round((MAX_IF_FREQ - MIN_IF_FREQ) / IF_FREQ_RESOL) + 1
+freq_axis = np.linspace(start=MIN_IF_FREQ, stop=MAX_IF_FREQ, num=freq_buckets, endpoint=True)
+print("IF frequency resolution: ", "{:,}".format(IF_FREQ_RESOL), " Hz")
 
 # Q-learning settings.
-EPISODES_LIMIT = 30_000 + 1
+EPISODES_LIMIT = 1000 + 1
+SHOW_EVERY = 10
 LEARNING_RATE = 0.5
 DISCOUNT = 0.5
 epsilon = np.full(temp_buckets, 0.5)
-EPS_DECAY = np.full(temp_buckets, 0.9999) # Every episode will be epsilon*EPS_DECAY
-SHOW_EVERY = 1_000
+EPS_DECAY = np.full(temp_buckets, 0.99) # Every episode will be epsilon*EPS_DECAY
 Q_VALUE_MIN = -5
 Q_VALUE_MAX = 0
 
 class learning_agent:
     def __init__(self):
-        self.voltage_bucket = 0
-    def __str__(self):
-        return f"{self.time}, {self.freq}"
-    def action(self, choice):
+        self.voltage_variation = 0
+    def action(self, choice, previous_voltage, next_voltage):
         if choice == 0: 
-            self.voltage_bucket = self.voltage_bucket # keep same frequency
+            next_voltage = previous_voltage # keep same frequency
         if choice == 1: 
-            self.voltage_bucket += 1 # increase DAC output voltage FINE
+            next_voltage = previous_voltage + 1 * VOLTAGE_RESOL # increase DAC output voltage FINE
         if choice == 2:
-            self.voltage_bucket -= 1 # decrease DAC output voltage FINE
+            next_voltage = previous_voltage - 1 * VOLTAGE_RESOL # decrease DAC output voltage FINE
         if choice == 3:
-            self.voltage_bucket += 10 # increase DAC output voltage
+            next_voltage = previous_voltage + 10 * VOLTAGE_RESOL # increase DAC output voltage COARSE
         if choice == 4:
-            self.voltage_bucket -= 10 # decrease DAC output voltage
-        if choice == 5:
-            self.voltage_bucket += 100 # increase DAC output voltage
-        if choice == 6:
-            self.voltage_bucket -= 100 # decrease DAC output voltage
-        if choice == 7:
-            self.voltage_bucket += 1000 # increase DAC output voltage
-        if choice == 8:
-            self.voltage_bucket -= 1000 # decrease DAC output voltage
-        if choice == 9:
-            self.voltage_bucket += 10000 # increase DAC output voltage
-        if choice == 10:
-            self.voltage_bucket -= 10000 # decrease DAC output voltage
-        if self.voltage_bucket < 0:
-            self.voltage_bucket = 0
-        elif self.voltage_bucket > (voltage_buckets - 1):
-            self.voltage_bucket = (voltage_buckets - 1)
+            next_voltage = previous_voltage - 10 * VOLTAGE_RESOL # decrease DAC output voltage COARSE
+        # Check if out of range
+        if next_voltage < MIN_VOLTAGE:
+            next_voltage = MIN_VOLTAGE
+        elif next_voltage > MAX_VOLTAGE:
+            next_voltage = MAX_VOLTAGE
+        return next_voltage
 
 def getTemperature():
     if np.random.random() > 0:
         temperature_bucket = 0
     else: 
         temperature_bucket = 1
-    return temperature_bucket
+    return temperature_bucket, MIN_TEMP_C + TEMP_RESOL * temperature_bucket
 
 # Model of the VCO tuning law
 tuning_law = np.ndarray((temp_buckets, voltage_buckets))
@@ -144,70 +135,82 @@ ax2.set_ylabel("Frequency [Hz]")
 ax2.set_xlabel("Time [s]")
 
 # Q-table: random initialization
-q_table = np.random.uniform(low=Q_VALUE_MIN, high=Q_VALUE_MAX, size=(ACTIONS_NUMBER,temp_buckets,time_buckets,freq_buckets))
+q_table = np.random.uniform(low=Q_VALUE_MIN, high=Q_VALUE_MAX, size=(ACTIONS_NUMBER,temp_buckets,time_buckets))
 
 # Q-learning process
 rewards_history = []
-VCO_history = np.zeros(time_buckets)
-RX_history = np.zeros(time_buckets)
+DAC_history = np.ones((temp_buckets, time_buckets)) * MIN_VOLTAGE # DAC signals that the system is learning.
+DAC = learning_agent()
 IF_history = np.zeros(time_buckets)
-DAC_history = np.zeros(time_buckets)
-fig3 = plt.figure(3)
+IF_deviation = np.zeros(time_buckets)
+fig3 = plt.figure(3) # On-going results of the training
 
 for episode in range(EPISODES_LIMIT):
-    episode_reward = 0 # Reset this temporary value at every episode.
-    current_temperature = getTemperature()
+    # Reset this temporary values at every episode.
+    episode_reward = 0
+    VCO_history = np.zeros(time_buckets)
+    RX_history = np.zeros(time_buckets)
+    IF_history = np.zeros(time_buckets)
+    IF_deviation_OLD = IF_deviation
+    IF_deviation = np.zeros(time_buckets)
+
     time_bucket = 0
-    current_time = time_bucket
-    DAC = learning_agent()
-    DAC_history[time_bucket] = DAC.voltage_bucket
-    VCO_output = tuning_law[current_temperature,DAC.voltage_bucket]
+    current_time_bucket = time_bucket
+    [current_temperature_bucket, current_temperature] = getTemperature()
+    current_voltage = DAC_history[current_temperature_bucket, current_time_bucket]
+
+    VCO_output = a1 * np.log(current_voltage) + a2 - (a3 * (current_temperature - a4))
     VCO_history[time_bucket] = VCO_output
-    current_freq = round(abs(IF_history[time_bucket])/FREQ_RESOL)
 
     while time_bucket < (time_buckets-1):
-        if np.random.random() > epsilon[current_temperature]: # exploiting action
-            action = np.argmax(q_table[:, current_temperature, current_time, current_freq])
+        if np.random.random() > epsilon[current_temperature_bucket]: # exploiting action
+            action = np.argmax(q_table[:, current_temperature_bucket, current_time_bucket])
         else: # explorative action
             action = np.random.randint(0, ACTIONS_NUMBER)
         
         # Current state
-        current_time = time_bucket
-        current_freq = round(abs(IF_history[time_bucket])/FREQ_RESOL)
-        if current_freq > freq_buckets - 1:
-            current_freq = freq_buckets - 1
-        elif current_freq < 0:
-            current_freq = 0
+        current_time_bucket = time_bucket
+        IF_deviation[current_time_bucket] = round((IF_history[current_time_bucket] - target_IF)/IF_FREQ_RESOL)
+        # if IF_history[current_time_bucket] > MAX_IF_FREQ:
+        #     IF_history[current_time_bucket] = MAX_IF_FREQ
+        # elif IF_history[current_time_bucket] < MIN_IF_FREQ:
+        #     IF_history[current_time_bucket] = MIN_IF_FREQ
         
         # Take the action!
-        DAC.action(action)
-        time_bucket += 1
+        new_voltage = DAC.action(action, DAC_history[current_temperature_bucket, current_time_bucket], DAC_history[current_temperature_bucket, current_time_bucket+1])
+        time_bucket += 1 # Increment for the while loop
 
         # New state
-        new_time = current_time + 1
-        DAC_history[new_time] = DAC.voltage_bucket
-        VCO_output = tuning_law[current_temperature,DAC.voltage_bucket]
-        VCO_history[new_time] = VCO_output
-        if (new_time*TIME_RESOL < rtt):
-            RX_history[new_time] = 0
+        new_time_bucket = current_time_bucket + 1
+        DAC_history[current_temperature_bucket, new_time_bucket] = new_voltage
+        VCO_output = a1 * np.log(new_voltage) + a2 - (a3 * (current_temperature - a4))
+        VCO_history[new_time_bucket] = VCO_output
+        if (new_time_bucket*TIME_RESOL < rtt):
+            RX_history[new_time_bucket] = 0
         else:
-            RX_history[new_time] = VCO_history[new_time - 1]
-        IF_history[new_time] = VCO_output - RX_history[new_time]
-        if IF_history[new_time] > MAX_IF_FREQ:
-            IF_history[new_time] = MAX_IF_FREQ
-        elif IF_history[new_time] < MIN_IF_FREQ:
-            IF_history[new_time] = MIN_IF_FREQ
+            RX_history[new_time_bucket] = VCO_history[new_time_bucket - 1]
+        IF_history[new_time_bucket] = VCO_output - RX_history[new_time_bucket]
+        # if IF_history[new_time_bucket] > MAX_IF_FREQ:
+        #     IF_history[new_time_bucket] = MAX_IF_FREQ
+        # elif IF_history[new_time_bucket] < MIN_IF_FREQ:
+        #     IF_history[new_time_bucket] = MIN_IF_FREQ
+        IF_deviation[new_time_bucket] = round((IF_history[new_time_bucket] - target_IF)/IF_FREQ_RESOL)
+        
         # Evaluate reward for this time step.
-        reward = - abs(target_IF - IF_history[new_time])
-        # reward = -abs(goal_modulation[new_time] - VCO_history[new_time])
-        new_time = current_time + 1
-        new_freq = round(IF_history[new_time]/FREQ_RESOL)
+        if IF_deviation[new_time_bucket] < IF_deviation_OLD[new_time_bucket]:
+            reward = +2
+        elif IF_deviation[new_time_bucket] >= IF_deviation_OLD[new_time_bucket]:
+            reward = -2
+        if IF_deviation[current_time_bucket] == IF_deviation[new_time_bucket]:
+            reward = +1
+        new_time_bucket = current_time_bucket + 1
+        new_freq = round(IF_history[new_time_bucket]/IF_FREQ_RESOL)
 
         # Evaluate new Q-value
-        max_future_q = np.max(q_table[:, current_temperature, new_time, new_freq])
-        current_q = q_table[action, current_temperature, current_time, current_freq]
+        max_future_q = np.max(q_table[:, current_temperature_bucket, new_time_bucket])
+        current_q = q_table[action, current_temperature_bucket, current_time_bucket]
         new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
-        q_table[action, current_temperature, current_time, current_freq] = new_q
+        q_table[action, current_temperature_bucket, current_time_bucket] = new_q
         episode_reward += reward
     if episode % SHOW_EVERY == 0:
             print(f"On episode #{episode}, epsilon is {epsilon}")
@@ -232,10 +235,10 @@ for episode in range(EPISODES_LIMIT):
             ax5.set_title("Tuning voltage")
             ax5.set_ylabel("Voltage [V]")
             ax5.set_xlabel("Time [s]")
-            ax5.plot(time_axis, DAC_history[:]*VOLTAGE_RESOL + MIN_VOLTAGE)
+            ax5.plot(time_axis, DAC_history[current_temperature_bucket, :])
             plt.pause(2)
     rewards_history.append(episode_reward)
-    epsilon[current_temperature] *= EPS_DECAY[current_temperature]
+    epsilon[current_temperature_bucket] *= EPS_DECAY[current_temperature_bucket]
 # Moving average of reward history
 moving_avg = np.convolve(rewards_history, np.ones((SHOW_EVERY,))/SHOW_EVERY, mode='valid')
 # Plot reward history

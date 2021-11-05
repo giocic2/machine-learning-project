@@ -241,7 +241,7 @@ moving_avg = np.convolve(rewards_history, np.ones((SHOW_EVERY,))/SHOW_EVERY, mod
 # Plot reward history
 fig4 = plt.figure(4)
 ax = fig4.add_subplot(1,1,1)
-ax.set_title("Mixer input signals")
+ax.set_title("Moving average of reward history")
 ax.set_ylabel(f"Reward {SHOW_EVERY}ma")
 ax.set_xlabel("episode #")
 ax.plot([i for i in range(len(moving_avg))], moving_avg)
