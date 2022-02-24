@@ -11,3 +11,14 @@ print(reg.score(X, y))
 print(reg.coef_)
 print(reg.intercept_)
 print(reg.predict(np.array([[3, 5]])))
+
+# Test: VCO freq vs voltage
+a0 = 1
+a1 = 2
+a3 = 0.7
+voltage = np.linspace(start=0, stop=5, num=21, endpoint=True) # V
+freqVCO = a0 + a1*voltage + a3*(voltage**2) # Hz
+plt.plot(voltage, freqVCO)
+plt.xlabel('voltage (V)')
+plt.ylabel('frequency (Hz)')
+plt.show()
