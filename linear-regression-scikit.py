@@ -12,7 +12,7 @@ print(reg.coef_)
 print(reg.intercept_)
 print(reg.predict(np.array([[3, 5]])))
 
-# Test: VCO freq vs voltage
+# Test 1: VCO freq vs voltage
 a0 = 1
 a1 = 2
 a3 = 0.7
@@ -33,3 +33,6 @@ print(reg.score(X, y))
 print(reg.coef_)
 print(reg.intercept_)
 print(reg.predict(np.array([[6, 6**2]])))
+freqVCO_reg = reg.intercept_ + np.dot(reg.coef_, np.row_stack((voltage, voltage**2)))
+plt.plot(voltage, freqVCO_reg)
+plt.show()
