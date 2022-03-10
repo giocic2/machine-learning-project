@@ -31,5 +31,13 @@ VCOfreq_samples = np.zeros(SAMPLES_NUMBER)
 samples[:,1] += 273.15 # From Celsius degree to Kelvin
 for index in range(SAMPLES_NUMBER):
     VCOfreq_samples[index] = a1 * np.log(samples[index,0]) + a2 - (a3 * (samples[index,1] - a4))
-    print(f"Sample #{index+1:}: {VCOfreq_samples[index]/1e9:.2f} GHz")
+    print(f"Sample #{index+1:}: {samples[index,1]-273.15:.1f} °C, {samples[index,0]:.2f} V, {VCOfreq_samples[index]/1e9:.2f} GHz")
 
+voltage_feature = samples[:,0]
+temp_feature = samples[:,1]+273.15
+features = np.column_stack((temp_feature, voltage_feature, voltage_feature**2))
+
+reg = LinearRegression().fit(features, VCOfreq_samples)
+print(reg.score(features, VCOfreq_samples))
+print(reg.coef_)
+print(reg.intercept_)

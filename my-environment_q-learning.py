@@ -6,7 +6,7 @@ plt.ion()
 # Resolutions
 TIME_RESOL = 100e-6 # s
 FREQ_RESOL = 1e6 # Hz
-VOLTAGE_RESOL = 1e-5 # V
+VOLTAGE_RESOL = 1e-6 # V
 TEMP_RESOL = 10 # K
 
 # Q-table and environment variables.
