@@ -12,7 +12,7 @@ print(reg.coef_)
 print(reg.intercept_)
 print(reg.predict(np.array([[3, 5]])))
 
-# Test: VCO freq vs voltage
+# Test 1: VCO freq vs voltage
 a0 = 1
 a1 = 2
 a3 = 0.7
@@ -21,4 +21,18 @@ freqVCO = a0 + a1*voltage + a3*(voltage**2) # Hz
 plt.plot(voltage, freqVCO)
 plt.xlabel('voltage (V)')
 plt.ylabel('frequency (Hz)')
+plt.show()
+voltage_samples = np.asarray([0.1, 1, 0.7, 0.3, 2, 4, 3.5, 5])
+freqVCO_samples = a0 + a1*voltage_samples + a3*(voltage_samples**2)
+voltage_feature = np.column_stack((voltage_samples, voltage_samples**2))
+plt.plot(voltage_samples)
+plt.plot(freqVCO_samples)
+plt.show()
+reg = LinearRegression().fit(voltage_feature, freqVCO_samples)
+print(reg.score(X, y))
+print(reg.coef_)
+print(reg.intercept_)
+print(reg.predict(np.array([[6, 6**2]])))
+freqVCO_reg = reg.intercept_ + np.dot(reg.coef_, np.row_stack((voltage, voltage**2)))
+plt.plot(voltage, freqVCO_reg)
 plt.show()
