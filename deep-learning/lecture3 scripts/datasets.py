@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset
-from torchvision import datasets
+from torchvision import datasets # torchvision library which contains vision-related stuff
 from torchvision.transforms import ToTensor
 import matplotlib.pyplot as plt
 

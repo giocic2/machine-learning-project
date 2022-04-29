@@ -54,14 +54,20 @@ print(f"Last column: {tensor[..., -1]}")
 tensor[:,1] = 0
 print(tensor)
 
-# Combining Tensors
+# Combining Tensors (concatenation)
+t1 = torch.cat([tensor, tensor, tensor], dim=0)
+print(t1)
 t1 = torch.cat([tensor, tensor, tensor], dim=1)
 print(t1)
 
 # Arithmetic operations
 
+# addition
+sum_tensor = tensor + tensor
+neg_sum_tensor = tensor - tensor
+
 # matrix multiplication
-y1 = tensor @ tensor.T
+y1 = tensor @ tensor.T # .T is the transpose operation
 y2 = tensor.matmul(tensor.T)
 
 y3 = torch.rand_like(tensor)
@@ -87,7 +93,7 @@ print(f"{tensor} \n")
 tensor.add_(5)
 print(tensor)
 
-# Pytorch-NumPy
+# Pytorch-NumPy: FULL COMPATIBILITY, SAME MEMORY LOCATION!
 
 # Tensor -> NumPy array
 

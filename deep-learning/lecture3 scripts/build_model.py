@@ -41,7 +41,7 @@ print(f"Predicted class: {y_pred}")
 
 # Model Layers
 
-input_image = torch.rand(3,28,28)
+input_image = torch.rand(3,28,28) # batch of 3 images with 1 channel, 28*28 pixels
 print(input_image.size())
 
 # nn.Flatten
