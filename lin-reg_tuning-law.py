@@ -13,7 +13,7 @@ MIN_VOLTAGE = 0.5 # Volt
 MAX_VOLTAGE = 5 # Volt
 
 # Samples of voltages and temperatures
-SAMPLES_NUMBER = 100
+SAMPLES_NUMBER = 1_000
 samples = np.column_stack((MIN_VOLTAGE + np.random.rand(SAMPLES_NUMBER)*(MAX_VOLTAGE - MIN_VOLTAGE), np.random.normal(loc=25, scale=1, size=SAMPLES_NUMBER))) # [V, K]
 plt.scatter(samples[:,0], samples[:,1])
 plt.title("Voltage-temperature pairs")

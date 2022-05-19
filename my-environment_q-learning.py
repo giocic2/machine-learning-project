@@ -6,7 +6,7 @@ plt.ion()
 # Resolutions
 TIME_RESOL = 100e-6 # s
 FREQ_RESOL = 1e6 # Hz
-VOLTAGE_RESOL = 1e-6 # V
+VOLTAGE_RESOL = 1e-3 # V
 TEMP_RESOL = 10 # K
 
 # Q-table and environment variables.
@@ -40,7 +40,7 @@ voltage_buckets = round((MAX_VOLTAGE - MIN_VOLTAGE) / VOLTAGE_RESOL) + 1
 print("Voltage buckets: ", voltage_buckets)
 voltage_axis = np.linspace(start=MIN_VOLTAGE, stop=MAX_VOLTAGE, num=voltage_buckets, endpoint=True)
 # FMCW linear modulation
-BANDWIDTH = 3e9 # Hz
+BANDWIDTH = 3e3 # Hz
 CHIRP_PERIOD = END_TIME # s
 START_FREQUENCY = 23e9 # Hz
 # Target
@@ -59,7 +59,7 @@ print("Q-table size: ", time_buckets*freq_buckets*voltage_buckets*temp_buckets)
 
 
 # Q-learning settings.
-EPISODES_LIMIT = 30_000 + 1
+EPISODES_LIMIT = 100_000 + 1
 LEARNING_RATE = 0.5
 DISCOUNT = 0.5
 epsilon = np.full(temp_buckets, 0.5)
@@ -111,7 +111,7 @@ def getTemperature():
 # Model of the VCO tuning law
 tuning_law = np.ndarray((temp_buckets, voltage_buckets))
 # VCO tuning law: coefficients
-a1 = 1.969e9 # Hz, dynamic of the log function
+a1 = 1.969e3 # Hz, dynamic of the log function
 a2 = 23.947e9 # Hz, offset for the log function
 a3 = 10e6 # Hz/K, temperature dependence
 a4 = 233 # K, offset for the temperature drift
